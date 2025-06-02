@@ -1,6 +1,6 @@
 # 🛡️ Vulnerable Web App Monitoring with ELK Stack
 
-This project sets up a **vulnerable DVWA container instrumented with Filebeat**, alongside an **Elasticsearch + Kibana (ELK)** stack, to simulate attacks and monitor logs for detection and analysis.
+This project sets up a vulnerable web application (Apache + MySQL) inside a Docker container with Filebeat for log shipping and ElastAlert for alerting. It is intended for educational and security monitoring testing purposes.
 
 ## 📌 Purpose
 
@@ -9,6 +9,7 @@ This environment allows you to:
 - Simulate attacks on a vulnerable web app (DVWA)
 - Use tools like **Nmap** or **Metasploit** to generate log events
 - Monitor and analyze those events in **Kibana**, using data collected via **Filebeat**
+- Trigger Alerts given specified rules via **ElastAlert**
 
 ---
 
@@ -20,6 +21,7 @@ This environment allows you to:
 | **Filebeat**      | Installed inside DVWA to ship Apache logs to Elasticsearch   |
 | **Elasticsearch** | Stores and indexes logs                                      |
 | **Kibana**        | UI for visualizing and exploring logs                        |
+| **ElastAlert**    | Detects suspicious behavior and sends alerts                 |
 
 ---
 
@@ -97,6 +99,73 @@ vuln-monitoring/
 - Docker
 - Docker Compose
 - Linux/MacOS or WSL (recommended for networking)
+
+---
+
+## 📣 ElastAlert Email Alerts (via Gmail)
+
+This project includes **ElastAlert** for alerting on suspicious patterns (like 404 spikes).
+
+### 🔔 Gmail SMTP Configuration
+
+To receive email alerts:
+
+1. Create a rule file in `elastalert/rules/404_spike.yaml`:
+
+```yaml
+name: "Spike in 404s"
+type: frequency
+index: filebeat-*
+num_events: 5
+timeframe:
+  minutes: 1
+filter:
+  - term:
+      http.response.status_code: 404
+query_key: source.ip
+
+alert:
+  - email
+email:
+  - "your-email@gmail.com"
+
+smtp_host: "smtp.gmail.com"
+smtp_port: 587
+smtp_ssl: false
+smtp_tls: true
+from_addr: "your-email@gmail.com"
+smtp_auth_file: "/opt/elastalert/smtp_auth.yaml"
+```
+
+2. Create the SMTP credentials file in `elastalert/smtp_auth.yaml`:
+
+```yaml
+user: "your-email@gmail.com"
+password: "your-app-password"
+```
+
+3. Update `docker-compose.yml` to mount the auth file:
+
+```yaml
+volumes:
+  - ./elastalert/smtp_auth.yaml:/opt/elastalert/smtp_auth.yaml
+```
+
+4. **Do not commit this password!**
+   Add this line to your `.gitignore`:
+
+```
+# Secret email credentials
+elastalert/smtp_auth.yaml
+```
+
+5. Restart ElastAlert:
+
+```bash
+docker-compose up -d elastalert
+```
+
+Test by triggering several 404s. You'll receive an alert email once the rule matches.
 
 ---
 
