@@ -1,0 +1,73 @@
+version: '3.7'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - ELASTIC_PASSWORD=changeme
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    networks:
+      - elk
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.13
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
+
+  dvwa:
+    build:
+      context: ./dvwa
+    container_name: dvwa
+    ports:
+      - "8080:80"
+    depends_on:
+      - elasticsearch
+      - kibana
+    restart: unless-stopped
+    networks:
+      - elk
+
+  elastalert:
+    image: jertel/elastalert2:latest
+    container_name: elastalert
+    restart: always
+    volumes:
+      - ./elastalert/config.yaml:/opt/elastalert/config.yaml
+      - ./elastalert/smtp_auth_user.yaml:/opt/elastalert/smtp_auth.yaml
+      - ./elastalert/rules:/opt/elastalert/rules
+      - ./elastalert/rule_templates:/opt/elastalert/rule_templates
+      - elastalert-data:/opt/elastalert
+    ports:
+      - "3030:3030"
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+
+volumes:
+  elastalert-data:
+
+networks:
+  elk:
+    driver: bridge

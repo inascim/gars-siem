@@ -1,0 +1,33 @@
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "elastic"
+  password: "changeme"
+
+
+setup.kibana:
+  host: "kibana:5601"
+
+# Optional: enable modules like apache2
+filebeat.modules:
+- module: apache
+  access:
+    enabled: true
+    var.paths: ["/var/log/apache2/access.log*"]
+  error:
+    enabled: true
+    var.paths: ["/var/log/apache2/error.log*"]
+
+metricbeat.modules:
+- module: apache
+  metricsets: ["status"]
+  period: 10s
+  enabled: true
+
+  # Apache hosts
+  hosts: ["http://127.0.0.1"]
+
+

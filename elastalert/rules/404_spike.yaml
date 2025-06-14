@@ -1,0 +1,29 @@
+# elastalert/rules/404_spike.yaml
+name: "Spike in 404s"
+type: frequency
+index: filebeat-*
+num_events: 5
+timeframe:
+  minutes: 5
+
+filter:
+- term:
+    http.response.status_code: 404
+
+query_key: source.ip
+
+alert:
+  - "email"
+
+email:
+  - "hieifn@gmail.com"
+
+smtp_host: "smtp.gmail.com"
+smtp_port: 587
+smtp_ssl: false
+smtp_tls: true
+
+from_addr: "hieifn@gmail.com"
+smtp_auth_file: "/opt/elastalert/smtp_auth.yaml"
+
+
